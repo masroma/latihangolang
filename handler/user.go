@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"latihangolang/auth"
 	"latihangolang/helper"
 	"latihangolang/user"
 	"net/http"
@@ -10,10 +11,11 @@ import (
 
 type userHandler struct {
 	userService user.Service
+	authService auth.Service
 }
 
-func NewUserHandler(userService user.Service) *userHandler {
-	return &userHandler{userService}
+func NewUserHandler(userService user.Service, authService auth.Service) *userHandler {
+	return &userHandler{userService, authService}
 }
 
 func (h *userHandler) RegisterUser(c *gin.Context) {
@@ -41,7 +43,15 @@ func (h *userHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	formatter := user.FormatUser(newUser, "tokentokentoken")
+	token, err := h.authService.GenerateToken(newUser.ID)
+	if err != nil {
+		errors := helper.FormatValidationError(err)
+		errorMessage := gin.H{"error": errors}
+		response := helper.APIResponse("Register failed", http.StatusUnprocessableEntity, "error", errorMessage)
+		c.JSON(http.StatusUnprocessableEntity, response)
+		return
+	}
+	formatter := user.FormatUser(newUser, token)
 	response := helper.APIResponse("Register successfully", http.StatusOK, "success", formatter)
 
 	c.JSON(http.StatusOK, response)
@@ -69,15 +79,13 @@ func (h *userHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// token, err := h.authService.GenerateToken(loggedinUser.ID)
-	// if err != nil {
-	// 	errorMessage := gin.H{"errors" : err.Error()}
-	// 	response := helper.APIResponse("Login Failed", http.StatusUnprocessableEntity, "error", errorMessage)
-	// 	c.JSON(http.StatusUnprocessableEntity, response)
-	// 	return
-	// }
-
-	token := "tokentokentoken"
+	token, err := h.authService.GenerateToken(loggedinUser.ID)
+	if err != nil {
+		errorMessage := gin.H{"errors": err.Error()}
+		response := helper.APIResponse("Login Failed", http.StatusUnprocessableEntity, "error", errorMessage)
+		c.JSON(http.StatusUnprocessableEntity, response)
+		return
+	}
 
 	formatter := user.FormatUser(loggedinUser, token)
 
