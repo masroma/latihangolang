@@ -23,11 +23,16 @@ func main() {
 
 	userRepository := user.NewRepository(db)
 	userService := user.NewService(userRepository)
+
 	userHandler := handler.NewUserHandler(userService)
 
 	router := gin.Default()
 	api := router.Group("/api/v1")
 	api.POST("/register", userHandler.RegisterUser)
+	api.POST("/login", userHandler.Login)
+	api.POST("/upload_photo_profile", userHandler.UploadPhotoProfile)
+	api.POST("/check_email_available", userHandler.CheckEmailAvailable)
+
 	router.Run()
 
 }
